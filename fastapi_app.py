@@ -4,9 +4,19 @@ import pandas as pd
 import numpy as np
 import pickle
 import io
+from fastapi.middleware.cors import CORSMiddleware
 
 # Initialize FastAPI app
 app = FastAPI(title="Medical Report Integrity Checker API")
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # or your frontend URL
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Load saved artifacts once at startup
 with open(r"Best_Model/preproc.pkl", "rb") as f:
