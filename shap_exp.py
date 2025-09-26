@@ -66,7 +66,9 @@ def explain_model_predictions(model, X_data, num_cols, cat_cols, preproc, top_n=
         top_feats = get_top_features_with_reason(row[feature_names].values, n=top_n)
         
         reasoning_text = "; ".join([f"{r['orig_feature']} {r['reason']}" for _, r in top_feats.iterrows()])
-        shap_values_text = "; ".join([f"{r['orig_feature']} {r['shap_value']:.2f}" for _, r in top_feats.iterrows()])
+        # shap_values_text = "; ".join([f"{r['orig_feature']} {r['shap_value']:.2f}" for _, r in top_feats.iterrows()])
+        # Convert top features to dictionary {feature: shap_value}
+        shap_values_dict = {r['orig_feature']: round(r['shap_value'], 2) for _, r in top_feats.iterrows()}
         
         records_list.append({
             'record_idx': idx,
@@ -74,7 +76,7 @@ def explain_model_predictions(model, X_data, num_cols, cat_cols, preproc, top_n=
             'base_value': row['base_value'],
             'prediction_value': row['prediction_value'],
             'reasoning': reasoning_text,
-            'feature_shap_values': shap_values_text
+            'feature_shap_values': shap_values_dict
         })
     
     recordwise_reasoning_df = pd.DataFrame(records_list)
