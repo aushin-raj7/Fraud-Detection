@@ -5,6 +5,7 @@ import numpy as np
 import pickle
 import io
 from fastapi.middleware.cors import CORSMiddleware
+from shap_exp import explain_model_predictions
 
 # Initialize FastAPI app
 app = FastAPI(title="Medical Report Integrity Checker API")
@@ -30,7 +31,7 @@ with open(r"Best_Model/required_columns.pkl", "rb") as f:
 
 
 @app.post("/predict")
-async def predict(file: UploadFile = File(...), return_csv: bool = False):
+async def predict(file: UploadFile = File(...), return_csv: bool = False, top_n: int = 3):
     """
     Upload a CSV or Excel file containing medical reports.
     Returns predictions and probability of 'Altered' reports.
@@ -51,6 +52,10 @@ async def predict(file: UploadFile = File(...), return_csv: bool = False):
                 data[col] = 0
         df = data[required_columns]
 
+        # Identify numerical and categorical columns from the uploaded dataset
+        num_cols = df.select_dtypes(exclude=['object']).columns.tolist()
+        cat_cols = df.select_dtypes(include=['object']).columns.tolist()
+
         # Preprocess data
         X_proc = preproc.transform(df)
 
@@ -60,7 +65,27 @@ async def predict(file: UploadFile = File(...), return_csv: bool = False):
 
         # Append results
         data['Predicted_Target_Label'] = predictions
-        data['Probability_Altered'] = np.round(prediction_prob, 4) 
+        data['Probability_Altered'] = prediction_prob
+
+        #Compute SHAP values and top feature contributions
+        recordwise_reasoning_df = explain_model_predictions(
+            model=model,
+            X_data=X_proc,
+            num_cols=num_cols,
+            cat_cols=cat_cols,
+            preproc=preproc,
+            top_n=top_n,
+            threshold=0.5
+        )
+
+        # Merge 'feature_shap_values' after 'Probability_Altered'
+        data.insert(
+            loc=data.columns.get_loc('Probability_Altered') + 1,  # after Probability_Altered
+            column='feature_shap_values',
+            value=recordwise_reasoning_df['feature_shap_values']
+        )
+
+        data.rename(columns={'feature_shap_values': 'Top_Feature_Contributions'}, inplace=True)
 
         # Return CSV if requested
         if return_csv:
