@@ -4,3 +4,6 @@ pandas==2.3.2
 scikit-learn==1.6.1
 streamlit==1.50.0
 xgboost==3.0.5
+fastapi 
+uvicorn
+python-multipart
